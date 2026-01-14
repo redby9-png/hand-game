@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>왼손/오른손 들기 게임</title>
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            touch-action: manipulation; /* 모바일 확대 방지 */
+        }
+
+        h1 { margin-bottom: 10px; color: #333; }
+        
+        /* 점수 및 타이머 */
+        #score-board { font-size: 1.5rem; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
+        #timer-bar-container { width: 300px; height: 10px; background: #ddd; border-radius: 5px; margin-bottom: 20px; overflow: hidden;}
+        #timer-bar { width: 100%; height: 100%; background: #4caf50; transition: width linear; }
+
+        /* 게임 캐릭터 영역 */
+        .character-container {
+            position: relative;
+            width: 200px;
+            height: 250px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            margin-bottom: 30px;
+        }
+
+        .head {
+            width: 80px; height: 80px; background: #ffcc80; border-radius: 50%;
+            position: absolute; top: 0; z-index: 2; border: 3px solid #333;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 40px;
+        }
+        
+        .body {
+            width: 60px; height: 120px; background: #4fc3f7; 
+            border-radius: 20px; border: 3px solid #333;
+            position: absolute; top: 70px; z-index: 1;
+        }
+
+        /* 팔 스타일 */
+        .arm {
+            width: 100px; height: 30px; background: #ffcc80;
+            border: 3px solid #333; border-radius: 15px;
+            position: absolute; top: 90px;
+            transform-origin: top; /* 회전 축 */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* 팔 위치 조정 (사용자 기준 왼쪽/오른쪽) */
+        /* 화면상 왼쪽이 사용자의 왼손(캐릭터의 오른손) - 거울 모드 적용 */
+        .arm.left { 
+            left: -50px; 
+            transform-origin: right center;
+            transform: rotate(30deg); /* 기본 내린 상태 */
+        }
+        
+        .arm.right { 
+            right: -50px; 
+            transform-origin: left center;
+            transform: rotate(-30deg); /* 기본 내린 상태 */
+        }
+
+        /* 손 들었을 때 클래스 */
+        .arm.left.up { transform: rotate(-130deg); background-color: #ff7043; } /* 강조색 */
+        .arm.right.up { transform: rotate(130deg); background-color: #ff7043; }
+
+        /* 명령어 표시 텍스트 */
+        #command-display {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #d32f2f;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* 컨트롤 버튼 */
+        .controls { display: flex; gap: 20px; }
+        .btn {
+            width: 120px; height: 80px;
+            font-size: 1.2rem;
+            border: none; border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        .btn:active { transform: scale(0.95); }
+
+        .btn-left { background-color: #ffeb3b; color: #333; }
+        .btn-right { background-color: #81c784; color: #333; }
+        
+        /* 상태에 따른 버튼 스타일 변경 */
+        .btn-left.active { background-color: #fdd835; border: 3px solid #333; }
+        .btn-right.active { background-color: #66bb6a; border: 3px solid #333; }
+
+        /* 시작 화면 오버레이 */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 100; color: white;
+        }
+        #start-btn {
+            padding: 15px 40px; font-size: 2rem;
+            background: #ff4081; color: white; border: none;
+            border-radius: 50px; cursor: pointer; margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <h1>🙌 왼손/오른손 들기 게임</h1>
+        <p>소리를 켜주세요! 명령에 맞춰 버튼을 누르세요.</p>
+        <button id="start-btn" onclick="startGame()">게임 시작</button>
+    </div>
+
+    <div id="score-board">점수: <span id="score">0</span></div>
+    
+    <div id="timer-bar-container">
+        <div id="timer-bar"></div>
+    </div>
+
+    <div id="command-display">준비...</div>
+
+    <div class="character-container">
+        <div class="head">🙂</div>
+        <div class="body"></div>
+        <div class="arm left" id="visual-left"></div>
+        <div class="arm right" id="visual-right"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-left" id="btn-left" onclick="toggleHand('left')">왼손</button>
+        <button class="btn btn-right" id="btn-right" onclick="toggleHand('right')">오른손</button>
+    </div>
+
+    <script>
+        // 게임 상태 변수
+        let score = 0;
+        let isPlaying = false;
+        let currentLevelTime = 3000; // 초기 제한 시간 3초
+        let timerInterval;
+        
+        // 현재 손 상태 (false: 내림, true: 올림)
+        let state = { left: false, right: false };
+        
+        // 목표 상태
+        let targetState = { left: false, right: false };
+
+        // 명령어 목록
+        const commands = [
+            { text: "왼손 들어!", target: { left: true, right: null } }, // right: null은 기존 상태 유지 또는 상관없음이 아니라, 이 게임에선 보통 상태 유지를 의미하지만 여기선 헷갈리지 않게 현재상태 유지로 처리
+            { text: "왼손 내려!", target: { left: false, right: null } },
+            { text: "오른손 들어!", target: { left: null, right: true } },
+            { text: "오른손 내려!", target: { left: null, right: false } },
+            { text: "두 손 들어!", target: { left: true, right: true } },
+            { text: "두 손 내려!", target: { left: false, right: false } }
+        ];
+
+        // 음성 합성 (TTS) 설정
+        const synth = window.speechSynthesis;
+
+        function speak(text) {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            const utterThis = new SpeechSynthesisUtterance(text);
+            utterThis.lang = 'ko-KR';
+            utterThis.rate = 1.2; // 약간 빠르게
+            synth.speak(utterThis);
+        }
+
+        // 손 조작 함수 (토글 방식)
+        function toggleHand(hand) {
+            state[hand] = !state[hand];
+            updateVisuals();
+        }
+
+        // 화면 업데이트 (팔 동작 및 버튼 색상)
+        function updateVisuals() {
+            const leftArm = document.getElementById('visual-left');
+            const rightArm = document.getElementById('visual-right');
+            const leftBtn = document.getElementById('btn-left');
+            const rightBtn = document.getElementById('btn-right');
+
+            // 왼손 처리
+            if (state.left) {
+                leftArm.classList.add('up');
+                leftBtn.classList.add('active');
+                leftBtn.innerText = "왼손 (듦)";
+            } else {
+                leftArm.classList.remove('up');
+                leftBtn.classList.remove('active');
+                leftBtn.innerText = "왼손";
+            }
+
+            // 오른손 처리
+            if (state.right) {
+                rightArm.classList.add('up');
+                rightBtn.classList.add('active');
+                rightBtn.innerText = "오른손 (듦)";
+            } else {
+                rightArm.classList.remove('up');
+                rightBtn.classList.remove('active');
+                rightBtn.innerText = "오른손";
+            }
+        }
+
+        // 게임 시작
+        function startGame() {
+            document.getElementById('start-overlay').style.display = 'none';
+            score = 0;
+            currentLevelTime = 2500;
+            document.getElementById('score').innerText = score;
+            isPlaying = true;
+            state = { left: false, right: false }; // 초기화
+            updateVisuals();
+            nextRound();
+        }
+
+        // 다음 라운드 진행
+        function nextRound() {
+            if (!isPlaying) return;
+
+            // 랜덤 명령어 선택
+            const randomIndex = Math.floor(Math.random() * commands.length);
+            const command = commands[randomIndex];
+
+            // 목표 상태 설정
+            // null인 경우 현재 상태를 유지하는 것이 목표
+            targetState.left = (command.target.left === null) ? state.left : command.target.left;
+            targetState.right = (command.target.right === null) ? state.right : command.target.right;
+
+            // 화면 및 음성 출력
+            const display = document.getElementById('command-display');
+            display.innerText = command.text;
+            display.style.color = "#d32f2f"; // 빨간색 (명령)
+            speak(command.text);
+
+            // 타이머 바 애니메이션
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            
+            // 리플로우 강제 (애니메이션 재시작을 위해)
+            void timerBar.offsetWidth;
+
+            timerBar.style.transition = `width ${currentLevelTime}ms linear`;
+            timerBar.style.width = '0%';
+
+            // 제한 시간 후 결과 체크
+            clearTimeout(timerInterval);
+            timerInterval = setTimeout(() => {
+                checkResult();
+            }, currentLevelTime);
+        }
+
+        // 결과 확인
+        function checkResult() {
+            if (!isPlaying) return;
+
+            const isSuccess = (state.left === targetState.left) && (state.right === targetState.right);
+
+            if (isSuccess) {
+                score++;
+                document.getElementById('score').innerText = score;
+                document.getElementById('command-display').innerText = "성공! ⭕";
+                document.getElementById('command-display').style.color = "green";
+                
+                // 난이도 조절 (최소 0.8초까지 빨라짐)
+                if (currentLevelTime > 800) currentLevelTime -= 100;
+                
+                // 잠깐 대기 후 다음 라운드
+                setTimeout(nextRound, 500); 
+            } else {
+                gameOver();
+            }
+        }
+
+        // 게임 오버
+        function gameOver() {
+            isPlaying = false;
+            speak("틀렸습니다. 게임 오버.");
+            document.getElementById('command-display').innerText = "실패! ❌";
+            
+            setTimeout(() => {
+                alert(`게임 종료! 당신의 점수는 ${score}점 입니다.`);
+                document.getElementById('start-overlay').style.display = 'flex';
+                document.getElementById('start-btn').innerText = "다시 하기";
+            }, 500);
+        }
+    </script>
+</body>
+</html>
