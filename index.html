@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>고양이 왼손/오른손 들기 게임</title>
+    <title>고양이 뒷모습 청기백기</title>
     <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
     <style>
-        /* --- 전체적인 테마 변경 --- */
+        /* --- 기본 스타일 설정 --- */
         body {
-            font-family: 'Jua', sans-serif; /* 귀여운 폰트 적용 */
-            background-color: #fff3e0; /* 따뜻한 배경색 */
+            font-family: 'Jua', sans-serif;
+            background-color: #fff3e0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -17,76 +17,177 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
-            touch-action: manipulation;
         }
 
-        h1 { margin-bottom: 10px; color: #e65100; /* 진한 주황색 */ }
+        /* 진행 상황 표시 */
+        #progress-board { font-size: 1.8rem; color: #e65100; margin-bottom: 20px; }
         
-        /* 점수 및 타이머 */
-        #score-board { font-size: 1.5rem; color: #e65100; margin-bottom: 10px; }
-        #timer-bar-container { width: 300px; height: 12px; background: #ffe0b2; border-radius: 10px; margin-bottom: 20px; overflow: hidden; border: 2px solid #ffb74d;}
-        #timer-bar { width: 100%; height: 100%; background: #ff9800; transition: width linear; border-radius: 10px; }
+        /* 타이머 바 (동작 간격 표시용) */
+        #timer-bar-container { width: 300px; height: 10px; background: #ffe0b2; border-radius: 5px; margin-bottom: 30px; overflow: hidden; }
+        #timer-bar { width: 0%; height: 100%; background: #ff9800; border-radius: 5px; transition: width linear; }
 
-        /* --- 🐱 고양이 캐릭터 디자인 시작 --- */
+        /* --- 🐱 고양이 뒷모습 캐릭터 디자인 --- */
         .character-container {
             position: relative;
-            width: 220px;
-            height: 260px;
+            width: 200px;
+            height: 220px;
             display: flex;
             justify-content: center;
             align-items: flex-end;
-            margin-bottom: 30px;
-            /* filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); 그림자 효과 */
+            margin-bottom: 40px;
         }
 
-        /* 고양이 머리 */
-        .head {
-            width: 90px; height: 85px; 
+        /* 몸통 (뒷모습, 둥근 콩 모양) */
+        .body-back {
+            width: 120px; height: 160px;
             background: #ffb74d; /* 치즈색 */
-            border-radius: 50% 50% 45% 45%; /* 약간 타원형 */
-            position: absolute; top: 10px; z-index: 3;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 45px;
-            border: 3px solid #e65100; /* 진한 테두리 */
-            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.1);
+            border: 4px solid #e65100;
+            border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; /* 아래가 넓은 둥근 형태 */
+            position: relative; z-index: 2;
         }
-        
-        /* 고양이 귀 (가상 요소 사용) */
-        .head::before, .head::after {
-            content: '';
+
+        /* 귀 (뒤에서 본 모습) */
+        .ear-back {
             position: absolute;
-            bottom: 75%; /* 머리 위로 */
+            top: -20px;
             width: 0; height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 25px solid #ffb74d; /* 머리색과 동일 */
-            z-index: -1; /* 머리 뒤로 숨기기 */
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 35px solid #ffb74d; /* 몸통색과 동일 */
+            z-index: 1; /* 몸통 뒤로 */
         }
-        .head::before { left: -5px; transform: rotate(-20deg); border-bottom-color: #e65100; /* 귀 테두리 느낌 */ }
-        .head::after { right: -5px; transform: rotate(20deg); border-bottom-color: #e65100; }
-        /* 귀 안쪽 색 (이중 가상요소로 표현) */
-        .ear-inner-left, .ear-inner-right {
-             position: absolute;
-             top: -18px;
+        .ear-back.left { left: 5px; transform: rotate(-15deg); }
+        .ear-back.right { right: 5px; transform: rotate(15deg); }
+        /* 귀 테두리 표현을 위한 가상요소 */
+        .ear-back::after {
+             content: ''; position: absolute; top: 2px; left: -20px;
              width: 0; height: 0;
-             border-left: 10px solid transparent;
-             border-right: 10px solid transparent;
-             border-bottom: 18px solid #ffe0b2; /* 밝은 귀 안쪽 색 */
-             z-index: 4;
+             border-left: 20px solid transparent;
+             border-right: 20px solid transparent;
+             border-bottom: 35px solid #e65100; z-index: -1;
         }
-        .ear-inner-left { left: 5px; transform: rotate(-20deg); }
-        .ear-inner-right { right: 5px; transform: rotate(20deg); }
 
-
-        /* 고양이 몸통 */
-        .body {
-            width: 80px; height: 110px; 
-            background: #ffb74d; /* 치즈색 */
-            border-radius: 40px 40px 35px 35px; /* 둥글둥글하게 */
-            position: absolute; top: 90px; z-index: 2;
-            border: 3px solid #e65100;
+        /* 꼬리 */
+        .tail {
+            position: absolute; bottom: 10px; right: -30px;
+            width: 60px; height: 60px;
+            border: 8px solid #ffb74d;
+            border-top-color: transparent; border-left-color: transparent; /* 둥근 곡선 만들기 */
+            border-radius: 50%;
+            transform: rotate(-45deg);
+            z-index: 0;
+            box-shadow: 4px 4px 0 #e65100; /* 테두리 느낌 */
         }
-        /* 배 부분 밝은 무늬 */
-        .body::after {
-            content: ''; position: absolute;
-            top: 25%; left: 15%; width: 70
+
+        /* 솜방망이 (팔) - 뒷모습 기준 */
+        .arm {
+            width: 80px; height: 30px;
+            background: #ffb74d; border: 3px solid #e65100;
+            border-radius: 15px;
+            position: absolute; top: 60px;
+            transform-origin: 10px center; /* 어깨(몸통쪽) 기준 회전 */
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 3;
+        }
+
+        /* 위치: 플레이어의 왼쪽이 고양이의 왼쪽 */
+        .arm.left { left: -20px; transform: rotate(70deg); } /* 기본 내린 상태 (약간 뒤로) */
+        .arm.right { right: -20px; transform-origin: calc(100% - 10px) center; transform: rotate(-70deg); }
+
+        /* 들었을 때 (분홍 젤리 보임) */
+        .arm.left.up { transform: rotate(-60deg); background-color: #ffccbc; }
+        .arm.right.up { transform: rotate(60deg); background-color: #ffccbc; }
+        
+        /* --- 🐱 디자인 끝 --- */
+
+        /* 명령어 표시 */
+        #command-display {
+            font-size: 2.2rem; color: #d84315; height: 70px;
+            display: flex; align-items: center; text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.7);
+        }
+
+        /* 새로운 컨트롤 버튼 (다시 시작 / 중지) */
+        .controls { display: flex; gap: 20px; }
+        .btn-control {
+            padding: 15px 30px;
+            font-size: 1.5rem; font-family: 'Jua', sans-serif;
+            border: none; border-radius: 50px;
+            cursor: pointer; color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn-control:active { transform: scale(0.95); }
+        .btn-restart { background-color: #42a5f5; } /* 파란색 */
+        .btn-restart:hover { background-color: #1e88e5; }
+        .btn-stop { background-color: #ef5350; } /* 빨간색 */
+        .btn-stop:hover { background-color: #e53935; }
+
+        /* 시작 오버레이 */
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 243, 224, 0.98);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100; color: #e65100; text-align: center;
+        }
+        #start-btn-big {
+            padding: 20px 60px; font-size: 2.5rem; font-family: 'Jua', sans-serif;
+            background: #ff9800; color: white; border: none;
+            border-radius: 60px; cursor: pointer; margin-top: 40px;
+            box-shadow: 0 8px #e65100;
+        }
+        #start-btn-big:active { transform: translateY(4px); box-shadow: 0 4px #e65100; }
+
+    </style>
+</head>
+<body>
+
+    <div id="start-overlay">
+        <h1>🐱 고양이 뒷모습<br>청기백기 (10회)</h1>
+        <p style="font-size: 1.5rem; margin-top: 20px;">
+            고양이가 뒤돌아 있어요!<br>
+            <b>화면 왼쪽이 왼손</b>입니다.<br>
+            소리를 듣고 고양이 동작을 따라 해보세요.
+        </p>
+        <button id="start-btn-big" onclick="startGame()">시작하기!</button>
+    </div>
+
+    <div id="progress-board">진행: <span id="current-turn">0</span> / 10</div>
+
+    <div id="command-display">준비...</div>
+    
+    <div id="timer-bar-container">
+        <div id="timer-bar"></div>
+    </div>
+
+    <div class="character-container">
+        <div class="ear-back left"></div>
+        <div class="ear-back right"></div>
+        <div class="body-back"></div>
+        <div class="tail"></div>
+        <div class="arm left" id="visual-left"></div>
+        <div class="arm right" id="visual-right"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-control btn-restart" onclick="startGame()">다시 시작 🔄</button>
+        <button class="btn-control btn-stop" onclick="stopGame()">중지하기 ⏹️</button>
+    </div>
+
+    <script>
+        let currentTurn = 0;
+        const totalTurns = 10;
+        let isPlaying = false;
+        let turnDuration = 3000; // 한 턴당 3초
+        let gameLoopTimeout;
+        
+        // 현재 고양이 팔 상태
+        let visualState = { left: false, right: false };
+
+        // 명령어 목록 (이전과 동일)
+        const commands = [
+            { text: "왼손 들어! 🐾", target: { left: true, right: null } },
+            { text: "왼손 내려! 👇", target: { left: false, right: null } },
+            { text: "오른손 들어! 🐾", target: { left: null, right: true } },
+            { text: "오른손 내려! 👇", target: { left: null, right: false }
