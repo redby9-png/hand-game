@@ -190,4 +190,127 @@
             { text: "왼손 들어! 🐾", target: { left: true, right: null } },
             { text: "왼손 내려! 👇", target: { left: false, right: null } },
             { text: "오른손 들어! 🐾", target: { left: null, right: true } },
-            { text: "오른손 내려! 👇", target: { left: null, right: false }
+            { text: "오른손 내려! 👇", target: { left: null, right: false } },
+            { text: "두 손 들어! 🙌", target: { left: true, right: true } },
+            { text: "두 손 내려! 👇👇", target: { left: false, right: false } }
+        ];
+
+        const synth = window.speechSynthesis;
+
+        function speak(text) {
+            if (synth.speaking) synth.cancel();
+            const cleanText = text.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
+            const utterThis = new SpeechSynthesisUtterance(cleanText);
+            utterThis.lang = 'ko-KR';
+            utterThis.rate = 1.1;
+            synth.speak(utterThis);
+        }
+
+        // 화면 업데이트 (고양이 동작 수행)
+        function applyVisualState(target) {
+            const leftArm = document.getElementById('visual-left');
+            const rightArm = document.getElementById('visual-right');
+
+            // null이면 기존 상태 유지, 아니면 새 상태 적용
+            if (target.left !== null) visualState.left = target.left;
+            if (target.right !== null) visualState.right = target.right;
+
+            if (visualState.left) leftArm.classList.add('up');
+            else leftArm.classList.remove('up');
+
+            if (visualState.right) rightArm.classList.add('up');
+            else rightArm.classList.remove('up');
+        }
+
+        // 게임 시작 / 다시 시작
+        function startGame() {
+            stopGame(); // 기존 게임 중지
+            document.getElementById('start-overlay').style.display = 'none';
+            
+            currentTurn = 0;
+            isPlaying = true;
+            updateProgress();
+            
+            // 초기화 동작 (두 손 내리기)
+            visualState = { left: false, right: false };
+            applyVisualState({left: false, right: false});
+            
+            document.getElementById('command-display').innerText = "시작합니다!";
+            speak("게임을 시작합니다. 10번 동안 잘 따라 해보세요!");
+
+            // 잠시 후 첫 라운드 시작
+            setTimeout(nextRound, 2000);
+        }
+
+        // 게임 중지
+        function stopGame() {
+            isPlaying = false;
+            clearTimeout(gameLoopTimeout);
+            synth.cancel();
+            document.getElementById('command-display').innerText = "중지됨 ⏹️";
+            // 타이머 바 초기화
+             const timerBar = document.getElementById('timer-bar');
+             timerBar.style.transition = 'none';
+             timerBar.style.width = '0%';
+        }
+
+        // 진행 상황 업데이트
+        function updateProgress() {
+            document.getElementById('current-turn').innerText = currentTurn;
+        }
+
+        // 다음 라운드 진행
+        function nextRound() {
+            if (!isPlaying) return;
+
+            currentTurn++;
+            if (currentTurn > totalTurns) {
+                endGame();
+                return;
+            }
+            updateProgress();
+
+            // 랜덤 명령어 선택 및 수행
+            const randomIndex = Math.floor(Math.random() * commands.length);
+            const command = commands[randomIndex];
+
+            const display = document.getElementById('command-display');
+            display.innerText = command.text;
+            speak(command.text);
+            
+            // 고양이 동작 수행 (컴퓨터가 보여줌)
+            applyVisualState(command.target);
+
+            // 타이머 바 애니메이션 (다음 동작까지 남은 시간 표시)
+            const timerBar = document.getElementById('timer-bar');
+            timerBar.style.transition = 'none';
+            timerBar.style.width = '100%';
+            void timerBar.offsetWidth; // 리플로우 강제
+            timerBar.style.transition = `width ${turnDuration}ms linear`;
+            timerBar.style.width = '0%';
+
+            // 일정 시간 후 다음 라운드 호출
+            gameLoopTimeout = setTimeout(nextRound, turnDuration + 500); // 3초 + 0.5초 휴식
+        }
+
+        // 게임 종료 (10회 완주)
+        function endGame() {
+            isPlaying = false;
+            document.getElementById('command-display').innerText = "끝! 수고하셨습니다! 🎉";
+            speak("모든 명령이 끝났습니다. 수고하셨습니다!");
+            
+            // 두 손 들어 만세 자세로 마무리
+            setTimeout(() => {
+                 applyVisualState({left: true, right: true});
+            }, 1000);
+
+            setTimeout(() => {
+                document.getElementById('start-overlay').style.display = 'flex';
+                document.getElementById('start-overlay').querySelector('h1').innerText = "🎉 10회 완주 성공!";
+                document.getElementById('start-overlay').querySelector('p').innerText = "정말 잘 따라 하시네요!";
+                document.getElementById('start-btn-big').innerText = "다시 한 번?";
+            }, 4000);
+        }
+    </script>
+</body>
+</html>
